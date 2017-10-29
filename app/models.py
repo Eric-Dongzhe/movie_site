@@ -1,18 +1,21 @@
 # coding:utf-8
 from datetime import datetime
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from app import db
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-
-db = SQLAlchemy(app)
+# from flask import Flask
+# from flask_sqlalchemy import SQLAlchemy
+#
+# app = Flask(__name__)
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+#
+# db = SQLAlchemy(app)
 
 
 # User
 class User(db.Model):
     __tablename__ = 'user'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
@@ -35,6 +38,7 @@ class User(db.Model):
 # UserLog
 class UserLog(db.Model):
     __tablename__ = 'userlog'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -46,7 +50,7 @@ class UserLog(db.Model):
 
 class Tag(db.Model):
     __tablename__ = 'tag'
-
+    __table_args__ = {"useexisting": True}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
     addtime = db.Column(db.DateTime, index=True, default=datetime.now)
@@ -59,6 +63,7 @@ class Tag(db.Model):
 
 class Movie(db.Model):
     __tablename__ = 'movie'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), unique=True)
@@ -83,6 +88,7 @@ class Movie(db.Model):
 
 class Preview(db.Model):
     __tablename__ = 'preview'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), unique=True)
@@ -95,6 +101,7 @@ class Preview(db.Model):
 
 class Comment(db.Model):
     __tablename__ = 'comment'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text)
@@ -111,6 +118,7 @@ class Moviecol(db.Model):
     movie collections
     """
     __tablename__ = 'moviecol'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'))
@@ -123,6 +131,7 @@ class Moviecol(db.Model):
 
 class Auth(db.Model):
     __tablename__ = 'auth'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
@@ -135,6 +144,8 @@ class Auth(db.Model):
 
 class Role(db.Model):
     __tablename__ = 'role'
+    __table_args__ = {"useexisting": True}
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
     auths = db.Column(db.String(600))
@@ -149,6 +160,7 @@ class Admin(db.Model):
     管理员
     """
     __tablename__ = 'admin'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
@@ -169,9 +181,14 @@ class Admin(db.Model):
     def __repr__(self):
         return '<Admin {}>'.format(self.name)
 
+    def check_pwd(self, pwd):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.pwd, pwd)
+
 
 class Adminlog(db.Model):
     __tablename__ = 'adminlog'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
@@ -184,6 +201,7 @@ class Adminlog(db.Model):
 
 class Oplog(db.Model):
     __tablename__ = 'oplog'
+    __table_args__ = {"useexisting": True}
 
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
@@ -205,13 +223,17 @@ if __name__ == '__main__':
     # )
     # db.session.add(role)
     # db.session.commit()
-    from werkzeug.security import generate_password_hash
 
-    admin = Admin(
-        name='xiaowangrrrr',
-        pwd=generate_password_hash("123456d"),
-        is_super=0,
-        role_id=1
-    )
-    db.session.add(admin)
-    db.session.commit()
+
+    # from werkzeug.security import generate_password_hash
+    # # #
+    # admin = Admin(
+    #     name='aaaa',
+    #     pwd=generate_password_hash("123456d"),
+    #     is_super=0,
+    #     role_id=1
+    # )
+    # db.session.add(admin)
+    # db.session.commit()
+
+    pass
