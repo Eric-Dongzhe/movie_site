@@ -2,13 +2,15 @@ import os
 
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
-from app.admin.froms import LoginForm, TagForm, MovieForm
-from app.models import Admin, Tag, Movie
+from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm
+from app.models import Admin, Tag, Movie, Preview
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
+
+
 #  登录验证装饰器
 def admin_login_req(f):
     @wraps(f)
@@ -22,8 +24,8 @@ def admin_login_req(f):
 
 #  修改文件名称
 def change_filename(filename):
-    fileinfo = os.path.splitext(filename) # 将文件名分割为名称和拓展名
-    filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S')+str(uuid.uuid4().hex)+fileinfo[-1]
+    fileinfo = os.path.splitext(filename)  # 将文件名分割为名称和拓展名
+    filename = datetime.datetime.now().strftime('%Y%m%d%H%M%S') + str(uuid.uuid4().hex) + fileinfo[-1]
     # filename = '{datetime}{uuid}{f_tail}'
     return filename
 
@@ -141,8 +143,8 @@ def movie_add():
 
         url = change_filename(file_url)
         logo = change_filename(file_logo)
-        form.url.data.save(app.config['UP_DIR']+url)
-        form.logo.data.save(app.config['UP_DIR']+logo)
+        form.url.data.save(app.config['UP_DIR'] + url)
+        form.logo.data.save(app.config['UP_DIR'] + logo)
         move = Movie(
             title=data['title'],
             url=url,
@@ -180,7 +182,7 @@ def movie_edit(id_=None):
     form.url.validators = []
     form.logo.validators = []
     movie = Movie.query.get_or_404(int(id_))
-    if request.method =='GET':
+    if request.method == 'GET':
         form.info.data = movie.info
         form.tag_id.data = movie.tag_id
         form.star.data = movie.star
@@ -195,7 +197,6 @@ def movie_edit(id_=None):
             os.makedirs(app.config['UP_DIR'])
             os.chmod(app.config['UP_DIR'], 'rw')
         if form.url.data.filename != '':
-
             file_url = secure_filename(form.url.data.filename)
             movie.url = change_filename(file_url)
             form.url.data.save(app.config['UP_DIR'] + movie.url)
@@ -231,16 +232,78 @@ def movie_list(page=None):
     return render_template('admin/movie_list.html', page_data=page_data)
 
 
-@admin.route('/preview/add')
+@admin.route('/preview/add', methods=["GET", "POST"])
 @admin_login_req
 def preview_add():
-    return render_template('admin/preview_add.html')
+    form = PreviewForm()
+    if form.validate_on_submit():
+        data = form.data
+        print(data['title'])
+        file_logo = form.logo.data.filename
+        if not os.path.exists(app.config['UP_DIR']):
+            os.makedirs(app.config['UP_DIR'])
+            os.chmod(app.config['UP_DIR'], 'rw')
+        logo = change_filename(file_logo)
+        form.logo.data.save(app.config['UP_DIR'] + logo)
+        preview = Preview(
+            title=data['title'],
+            logo=logo
+        )
+        db.session.add(preview)
+        db.session.commit()
+        flash('预告添加成功', 'ok')
+        return redirect(url_for('admin.preview_add'))
+    return render_template('admin/preview_add.html', form=form)
 
 
-@admin.route('/preview/list')
+@admin.route('/preview/list<int:page>/', methods=["GET"])
 @admin_login_req
-def preview_list():
-    return render_template('admin/preview_list.html')
+def preview_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Preview.query.order_by(
+        Preview.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template('admin/preview_list.html', page_data=page_data)
+
+
+@admin.route('/preview/del/<int:id_>/', methods=["GET"])
+@admin_login_req
+def preview_del(id_=None):
+    preview = Preview.query.get_or_404(int(id_))
+    db.session.delete(preview)
+    db.session.commit()
+    flash("delete preview success！ ", "ok")
+    return redirect(url_for('admin.preview_list', page=1))
+
+
+@admin.route('/preview/edit<int:id_>/', methods=["GET", "POST"])
+@admin_login_req
+def preview_edit(id_=None):
+    form = PreviewForm()
+    form.logo.validators = []
+    preview = Preview.query.get_or_404(int(id_))
+    if request.method == 'GET':
+        form.title.data = preview.title
+
+    if form.validate_on_submit():
+        data = form.data
+        preview_count = Preview.query.filter_by(title=data['title']).count()
+        if preview_count == 1 and preview.title != data['title']:
+            flash('预告名已经存在！', 'err')
+            return redirect(url_for('admin.preview_edit', id_=id_))
+
+        if form.logo.data.filename != '':
+            file_logo = secure_filename(form.logo.data.filename)
+            preview.logo = change_filename(file_logo)
+            form.logo.data.save(app.config['UP_DIR'] + preview.logo)
+
+        preview.title = data['title']
+        db.session.add(preview)
+        db.session.commit()
+        flash('电影预告修改成功', 'ok')
+        return redirect(url_for('admin.preview_edit', id_=preview.id))
+    return render_template('admin/preview_edit.html', form=form, preview=preview)
 
 
 @admin.route('/user/list')
