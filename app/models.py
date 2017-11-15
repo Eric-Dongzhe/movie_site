@@ -4,11 +4,13 @@ from app import db
 
 # from flask import Flask
 # from flask_sqlalchemy import SQLAlchemy
-#
+# #
 # app = Flask(__name__)
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
+# # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moviesite.db'
+# #
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-#
+# #
 # db = SQLAlchemy(app)
 
 
@@ -213,6 +215,27 @@ class Oplog(db.Model):
         return '<OpLog {}>'.format(self.name)
 
 
+def insert_user():
+    from werkzeug.security import generate_password_hash
+
+    for i in range(1, 20):
+        name = "user_{}".format(i)
+        pwd = "pwd_{}".format(i)
+        email = '66666{}@dell.com'.format(i)
+        phone = '66666{}'.format(i)
+        info = '大家好！我是第{}号会员'.format(i)
+
+        user = User(
+            name=name,
+            pwd=generate_password_hash(pwd),
+            email=email,
+            phone=phone,
+            info=info
+        )
+        db.session.add(user)
+    db.session.commit()
+
+
 if __name__ == '__main__':
     # db.create_all()
 
@@ -235,5 +258,5 @@ if __name__ == '__main__':
     # )
     # db.session.add(admin)
     # db.session.commit()
-
+    insert_user()
     pass
