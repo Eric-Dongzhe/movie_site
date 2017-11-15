@@ -6,8 +6,8 @@ from app import db
 # from flask_sqlalchemy import SQLAlchemy
 # #
 # app = Flask(__name__)
-# # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moviesite.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
+# # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moviesite.db'
 # #
 # app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # #
@@ -236,6 +236,19 @@ def insert_user():
     db.session.commit()
 
 
+def insert_coment():
+    from random import choice
+    comments = ['无聊', '屌炸天', '女主好漂亮！！！有木有', '不后悔', '女主是谁', '给小萝莉打call', '楼上的，打你妹的call']
+    for i in range(3, 20):
+        comment = Comment(
+            content=choice(comments),
+            movie_id=choice([2,3]),
+            user_id=i
+        )
+        print(comment)
+        db.session.add(comment)
+    db.session.commit()
+
 if __name__ == '__main__':
     # db.create_all()
 
@@ -258,5 +271,7 @@ if __name__ == '__main__':
     # )
     # db.session.add(admin)
     # db.session.commit()
-    insert_user()
+    # insert_user()
+
+    insert_coment()
     pass
