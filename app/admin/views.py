@@ -3,7 +3,7 @@ import os
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
 from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm
-from app.models import Admin, Tag, Movie, Preview, User
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
@@ -335,10 +335,32 @@ def user_del(id_):
     return redirect(url_for('admin.user_list', page=1))
 
 
-@admin.route('/comment/list')
+@admin.route('/comment/list<int:page>', methods=['GET'])
 @admin_login_req
-def comment_list():
-    return render_template('admin/comment_list.html')
+def comment_list(page):
+    if page is None:
+        page = 1
+    page_data = Comment.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == Comment.movie_id,
+        User.id == Comment.user_id
+    ).order_by(
+        Comment.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template('admin/comment_list.html', page_data=page_data)
+
+
+@admin.route('/comment/del<int:id_>', methods=['GET'])
+@admin_login_req
+def comment_del(id_):
+    comment = Comment.query.get_or_404(int(id_))
+    db.session.delete(comment)
+    db.session.commit()
+    flash("delete comment success！ ", "ok")
+    return redirect(url_for('admin.comment_list', page=1))
 
 
 @admin.route('/moviecol/list')
