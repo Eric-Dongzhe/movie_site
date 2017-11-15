@@ -3,7 +3,7 @@ import os
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
 from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm
-from app.models import Admin, Tag, Movie, Preview
+from app.models import Admin, Tag, Movie, Preview, User
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
@@ -125,7 +125,8 @@ def tag_list(page=None):
     page_data = Tag.query.order_by(
         Tag.addtime.desc()
     ).paginate(page=page, per_page=10)
-
+    for item in page_data.items:
+        item.addtime = item.addtime.strftime("%Y-%m-%d %H:%M:%S")
     return render_template('admin/tag_list.html', page_data=page_data)
 
 
@@ -306,16 +307,32 @@ def preview_edit(id_=None):
     return render_template('admin/preview_edit.html', form=form, preview=preview)
 
 
-@admin.route('/user/list')
+@admin.route('/user/list<int:page>', methods=["GET"])
 @admin_login_req
-def user_list():
-    return render_template('admin/user_list.html')
+def user_list(page=None):
+    if page is None:
+        page = 1
+    page_data = User.query.order_by(
+        User.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template('admin/user_list.html', page_data=page_data)
 
 
-@admin.route('/user/view')
+@admin.route('/user/view<int:id_>', methods=['GET'])
 @admin_login_req
-def user_view():
-    return render_template('admin/user_view.html')
+def user_view(id_):
+    user = User.query.get_or_404(int(id_))
+    return render_template('admin/user_view.html', user=user)
+
+
+@admin.route('/user/del<int:id_>', methods=['GET'])
+@admin_login_req
+def user_del(id_):
+    user = User.query.get_or_404(int(id_))
+    db.session.delete(user)
+    db.session.commit()
+    flash("delete user success！ ", "ok")
+    return redirect(url_for('admin.user_list', page=1))
 
 
 @admin.route('/comment/list')
