@@ -202,3 +202,45 @@ class PreviewForm(FlaskForm):
             'class': 'btn btn-primary'
         }
     )
+
+
+class PwdForm(FlaskForm):
+    old_pwd = PasswordField(
+        label='old password',
+        validators=[
+            DataRequired('please input old password!')
+        ],
+        description='old_password',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'please input old pwd!'
+        }
+    )
+    new_pwd = PasswordField(
+        label='new password',
+        validators=[
+            DataRequired('please input new password!')
+        ],
+        description='new_password',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'please input new pwd!'
+        }
+    )
+    submit = SubmitField(
+        label='确认',
+        render_kw={
+            'class': 'btn btn-primary'
+        }
+    )
+
+    def validate_old_pwd(self, field):
+        from flask import session
+
+        pwd = field.data
+        name = session['admin']
+        admin = Admin.query.filter_by(
+            name=name
+        ).first()
+        if not admin.check_pwd(pwd):
+            raise ValidationError('old password wrong!')
