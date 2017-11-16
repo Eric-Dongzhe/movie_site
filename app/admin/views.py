@@ -54,7 +54,7 @@ def login():
 @admin.route('/logout/')
 @admin_login_req
 def logout():
-    # 退出后清楚会话
+    # 退出后清除会话
     session.pop('account', None)
     return redirect(url_for('admin.login'))
 
