@@ -49,13 +49,21 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         data = form.data
+        # 验证登录有效
         admin = Admin.query.filter_by(name=data['account']).first()
         if not admin.check_pwd(data['pwd']):
             flash('密码错误', 'err')
             return redirect(url_for('admin.login'))
         # 验证成功后存入会话
-        session['admin'] = data['admin']
+        session['admin'] = data['account']
         session['admin_id'] = admin.id
+        # 添加登录日志记录
+        admin_log = Adminlog(
+            admin_id=admin.id,
+            ip=request.remote_addr,
+        )
+        db.session.add(admin_log)
+        db.session.commit()
         return redirect(request.args.get('next') or url_for('admin.index'))
     return render_template('admin/login.html', form=form)
 
@@ -412,10 +420,19 @@ def oplog_list(page=None):
     return render_template('admin/oplog_list.html', page_data=page_data)
 
 
-@admin.route('/adminloginlog/list')
+@admin.route('/adminloginlog/list<int:page>', methods=['GET'])
 @admin_login_req
-def adminloginlog_list():
-    return render_template('admin/adminloginlog_list.html')
+def adminloginlog_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Adminlog.query.join(
+        Admin
+    ).filter(
+        Admin.id == Adminlog.admin_id
+    ).order_by(
+        Adminlog.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template('admin/adminloginlog_list.html', page_data=page_data)
 
 
 @admin.route('/userloginlog/list')
