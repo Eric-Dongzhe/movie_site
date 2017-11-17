@@ -215,6 +215,9 @@ class Oplog(db.Model):
         return '<OpLog {}>'.format(self.name)
 
 
+
+
+
 def insert_user():
     from werkzeug.security import generate_password_hash
 

@@ -2,8 +2,8 @@ import os
 
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
-from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog
+from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
@@ -441,16 +441,63 @@ def userloginlog_list():
     return render_template('admin/userloginlog_list.html')
 
 
-@admin.route('/auth/add')
+@admin.route('/auth/add', methods=['GET', 'POST'])
 @admin_login_req
 def auth_add():
-    return render_template('admin/auth_add.html')
+    form = AuthForm()
+    if form.validate_on_submit():
+        data = form.data
+        auth = Auth(
+            name=data['name'],
+            url=data['url']
+        )
+        db.session.add(auth)
+        db.session.commit()
+        flash('权限添加成功！', 'ok')
+    return render_template('admin/auth_add.html', form=form)
 
 
-@admin.route('/auth/list')
+@admin.route('/auth/del/<int:id_>/', methods=["GET"])
 @admin_login_req
-def auth_list():
-    return render_template('admin/auth_list.html')
+def auth_del(id_=None):
+    auth = Auth.query.filter_by(id=id_).first_or_404()
+    db.session.delete(auth)
+    db.session.commit()
+    flash("delete Auth success！ ", "ok")
+    return redirect(url_for('admin.auth_list', page=1))
+
+
+@admin.route('/auth/edit/<int:id_>', methods=["GET", "POST"])
+@admin_login_req
+def auth_edit(id_):
+    form = AuthForm()
+    auth = Auth.query.get_or_404(id_)
+    if form.validate_on_submit():
+        data = form.data
+        # auth_num = Auth.query.filter_by(name=data['name']).count()
+        # if auth.name != data['name'] and tag_num == 1:
+        #     flash('标签名称已经存在！ ', 'err')
+        #     return redirect(url_for('admin.tag_edit', id_=id_))
+        auth.name = data['name']
+        auth.url = data['url']
+        db.session.add(auth)
+        db.session.commit()
+        flash('权限修改成功！ ', 'ok')
+        redirect(url_for('admin.auth_edit', id_=id_))
+    return render_template('admin/auth_edit.html', form=form, auth=auth)
+
+
+@admin.route('/auth/list/<int:page>/', methods=["GET"])
+@admin_login_req
+def auth_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Auth.query.order_by(
+        Auth.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    for item in page_data.items:
+        item.addtime = item.addtime.strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('admin/auth_list.html', page_data=page_data)
 
 
 @admin.route('/role/add')
