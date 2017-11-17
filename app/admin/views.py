@@ -2,8 +2,8 @@ import os
 
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
-from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth
+from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth, Role
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
@@ -500,16 +500,66 @@ def auth_list(page=None):
     return render_template('admin/auth_list.html', page_data=page_data)
 
 
-@admin.route('/role/add')
+@admin.route('/role/add', methods=["GET", "POST"])
 @admin_login_req
 def role_add():
-    return render_template('admin/role_add.html')
+    form = RoleForm()
+    if form.validate_on_submit():
+        data = form.data
+        role = Role(
+            name=data['name'],
+            auths=','.join(map(lambda v: str(v), data['auths']))
+        )
+        db.session.add(role)
+        db.session.commit()
+        flash('角色添加成功！', 'ok')
+    return render_template('admin/role_add.html', form=form)
 
 
-@admin.route('/role/list')
+@admin.route('/role/list/<int:page>')
 @admin_login_req
-def role_list():
-    return render_template('admin/role_list.html')
+def role_list(page):
+    if page is None:
+        page = 1
+    page_data = Role.query.order_by(
+        Role.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    for item in page_data.items:
+        item.addtime = item.addtime.strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('admin/role_list.html', page_data=page_data)
+
+
+@admin.route('/role/del/<int:id_>/', methods=["GET"])
+@admin_login_req
+def role_del(id_=None):
+    role = Role.query.filter_by(id=id_).first_or_404()
+    db.session.delete(role)
+    db.session.commit()
+    flash("delete Role success！ ", "ok")
+    return redirect(url_for('admin.role_list', page=1))
+
+
+@admin.route('/role/edit/<int:id_>', methods=["GET", "POST"])
+@admin_login_req
+def role_edit(id_):
+    form = RoleForm()
+    role = Role.query.get_or_404(id_)
+    if request.method == 'GET':
+        form.auths.data = list(map(lambda x: int(x), role.auths.split(',')))
+    if form.validate_on_submit():
+        data = form.data
+        # auth_num = Auth.query.filter_by(name=data['name']).count()
+        # if auth.name != data['name'] and tag_num == 1:
+        #     flash('标签名称已经存在！ ', 'err')
+        #     return redirect(url_for('admin.tag_edit', id_=id_))
+        role.name = data['name']
+        role.auths = ','.join(map(lambda v: str(v), data['auths']))
+        db.session.add(role)
+        db.session.commit()
+        flash('角色修改成功！ ', 'ok')
+        redirect(url_for('admin.role_edit', id_=id_))
+    return render_template('admin/role_edit.html', form=form, role=role)
+
 
 
 @admin.route('/admin/add')
