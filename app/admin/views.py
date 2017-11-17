@@ -2,7 +2,7 @@ import os
 
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
-from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm
+from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm, AdminForm
 from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth, Role
 from functools import wraps
 from app import db, app
@@ -561,14 +561,35 @@ def role_edit(id_):
     return render_template('admin/role_edit.html', form=form, role=role)
 
 
-
-@admin.route('/admin/add')
+@admin.route('/admin/add', methods=["GET", "POST"])
 @admin_login_req
 def admin_add():
-    return render_template('admin/admin_add.html')
+    form = AdminForm()
+    if form.validate_on_submit():
+        from werkzeug.security import generate_password_hash
+        data = form.data
+        admin = Admin(
+            name=data['name'],
+            pwd=generate_password_hash(data['pwd']),
+            role_id=data['role_id']
+        )
+        db.session.add(admin)
+        db.session.commit()
+        flash('管理员添加成功！', 'ok')
+    return render_template('admin/admin_add.html', form=form)
 
 
-@admin.route('/admin/list')
+@admin.route('/admin/list/<int:page>', methods=["GET"])
 @admin_login_req
-def admin_list():
-    return render_template('admin/admin_list.html')
+def admin_list(page=None):
+    if page is None:
+        page = 1
+    # TODO: 关联查询貌似没生效，查不到role的name
+    page_data = Admin.query.join(Role).filter(
+        Role.id == Admin.role_id
+    ).order_by(
+        Admin.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    # for item in page_data.items:
+    #     item.addtime = item.addtime.strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('admin/admin_list.html', page_data=page_data)
