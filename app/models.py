@@ -167,7 +167,7 @@ class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
     pwd = db.Column(db.String(100))
-    is_super = db.Column(db.SmallInteger)  # 0 is super
+    is_super = db.Column(db.SmallInteger, default=1)  # 0 is super
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
     addtime = db.Column(db.DateTime, index=True, default=datetime.now)
 
