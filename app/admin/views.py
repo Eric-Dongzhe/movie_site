@@ -3,12 +3,20 @@ import os
 from . import admin
 from flask import render_template, redirect, url_for, flash, session, request
 from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog
 from functools import wraps
 from app import db, app
 from werkzeug.utils import secure_filename
 import uuid
 import datetime
+
+
+@admin.context_processor
+def tpl_extra():
+    data = dict(
+        online_time=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    return data
 
 
 #  登录验证装饰器
@@ -46,7 +54,8 @@ def login():
             flash('密码错误', 'err')
             return redirect(url_for('admin.login'))
         # 验证成功后存入会话
-        session['admin'] = data['account']
+        session['admin'] = data['admin']
+        session['admin_id'] = admin.id
         return redirect(request.args.get('next') or url_for('admin.index'))
     return render_template('admin/login.html', form=form)
 
@@ -55,7 +64,8 @@ def login():
 @admin_login_req
 def logout():
     # 退出后清除会话
-    session.pop('account', None)
+    session.pop('admin', None)
+    session.pop('admin_id', None)
     return redirect(url_for('admin.login'))
 
 
@@ -66,7 +76,6 @@ def pwd():
     if form.validate_on_submit():
         data = form.data
         admin = Admin.query.filter_by(name=session['admin']).first()
-        print(admin)
         from werkzeug.security import generate_password_hash
         admin.pwd = generate_password_hash(data['new_pwd'])
         db.session.add(admin)
@@ -93,6 +102,13 @@ def tag_add():
         db.session.add(tag)
         db.session.commit()
         flash('标签添加成功！ ', 'ok')
+        oplog = Oplog(
+            admin_id=session['admin_id'],
+            ip=request.remote_addr,
+            reason='添加标签: {}'.format(data['name'])
+        )
+        db.session.add(oplog)
+        db.session.commit()
         redirect(url_for('admin.tag_add'))
     return render_template('admin/tag_add.html', form=form)
 
@@ -381,10 +397,19 @@ def moviecol_list():
     return render_template('admin/moviecol_list.html')
 
 
-@admin.route('/oplog/list')
+@admin.route('/oplog/list<int:page>', methods=['GET'])
 @admin_login_req
-def oplog_list():
-    return render_template('admin/oplog_list.html')
+def oplog_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Oplog.query.join(
+        Admin
+    ).filter(
+        Admin.id == Oplog.admin_id
+    ).order_by(
+        Oplog.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template('admin/oplog_list.html', page_data=page_data)
 
 
 @admin.route('/adminloginlog/list')
