@@ -1,12 +1,26 @@
+# coding:utf-8
+
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, FileField, TextAreaField, SelectField, SelectMultipleField
 from wtforms.validators import DataRequired, ValidationError, EqualTo
 
 from app.models import Admin, Tag, Auth, Role
 
-tags = Tag.query.all()
-auth_list = Auth.query.all()
-role_list = Role.query.all()
+try:
+    tags = Tag.query.all()
+except Exception as tags_e:
+    print(tags_e)
+    tags = []
+try:
+    auth_list = Auth.query.all()
+except Exception as auths_e:
+    print(auths_e)
+    auth_list = []
+try:
+    role_list = Role.query.all()
+except Exception as rolls_e:
+    print(rolls_e)
+    role_list = []
 
 
 class LoginForm(FlaskForm):
@@ -298,7 +312,7 @@ class RoleForm(FlaskForm):
         }
 
     )
-    auths= SelectMultipleField(
+    auths = SelectMultipleField(
         label='权限列表',
         validators=[
             DataRequired('请选择权限！')

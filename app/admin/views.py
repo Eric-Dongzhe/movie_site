@@ -1,16 +1,40 @@
-import os
+# coding:utf-8
 
-from . import admin
-from flask import render_template, redirect, url_for, flash, session, request
-from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm, AdminForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth, Role
+import os
+import datetime
 from functools import wraps
-from app import db, app
+from flask import render_template, redirect, url_for, flash, session, request, abort
 from werkzeug.utils import secure_filename
 import uuid
-import datetime
+
+from . import admin
+from app.admin.froms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm, AdminForm
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, UserLog, Auth, Role
+from app import db, app
 
 
+def admin_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        admin = Admin.query.join(
+            Role
+        ).filter(
+            Role.id == Admin.role_id,
+            Admin.id == session['admin_id']
+        ).first()
+        auths = admin.role.auths
+        auths = list(map(lambda v: int(v), auths.split(',')))
+        auth_list = Auth.query.all()
+        urls = [v.url for v in auth_list for val in auths if val == v.id]
+        rule = request.url_rule
+        if rule not in urls:
+            abort(404)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+#  上下文管理器
 @admin.context_processor
 def tpl_extra():
     data = dict(
@@ -212,7 +236,7 @@ def movie_del(id_=None):
     return redirect(url_for('admin.movie_list', page=1))
 
 
-@admin.route('/move/edit<int:id_>/', methods=["GET", "POST"])
+@admin.route('/move/edit/<int:id_>/', methods=["GET", "POST"])
 @admin_login_req
 def movie_edit(id_=None):
     form = MovieForm()
@@ -256,7 +280,7 @@ def movie_edit(id_=None):
     return render_template('admin/movie_edit.html', form=form, movie=movie)
 
 
-@admin.route('/movie/list<int:page>/', methods=["GET"])
+@admin.route('/movie/list/<int:page>/', methods=["GET"])
 @admin_login_req
 def movie_list(page=None):
     if page is None:
@@ -293,7 +317,7 @@ def preview_add():
     return render_template('admin/preview_add.html', form=form)
 
 
-@admin.route('/preview/list<int:page>/', methods=["GET"])
+@admin.route('/preview/list/<int:page>/', methods=["GET"])
 @admin_login_req
 def preview_list(page=None):
     if page is None:
@@ -314,7 +338,7 @@ def preview_del(id_=None):
     return redirect(url_for('admin.preview_list', page=1))
 
 
-@admin.route('/preview/edit<int:id_>/', methods=["GET", "POST"])
+@admin.route('/preview/edit/<int:id_>/', methods=["GET", "POST"])
 @admin_login_req
 def preview_edit(id_=None):
     form = PreviewForm()
@@ -343,7 +367,7 @@ def preview_edit(id_=None):
     return render_template('admin/preview_edit.html', form=form, preview=preview)
 
 
-@admin.route('/user/list<int:page>', methods=["GET"])
+@admin.route('/user/list/<int:page>', methods=["GET"])
 @admin_login_req
 def user_list(page=None):
     if page is None:
@@ -354,14 +378,14 @@ def user_list(page=None):
     return render_template('admin/user_list.html', page_data=page_data)
 
 
-@admin.route('/user/view<int:id_>', methods=['GET'])
+@admin.route('/user/view/<int:id_>', methods=['GET'])
 @admin_login_req
 def user_view(id_):
     user = User.query.get_or_404(int(id_))
     return render_template('admin/user_view.html', user=user)
 
 
-@admin.route('/user/del<int:id_>', methods=['GET'])
+@admin.route('/user/del/<int:id_>', methods=['GET'])
 @admin_login_req
 def user_del(id_):
     user = User.query.get_or_404(int(id_))
@@ -371,7 +395,7 @@ def user_del(id_):
     return redirect(url_for('admin.user_list', page=1))
 
 
-@admin.route('/comment/list<int:page>', methods=['GET'])
+@admin.route('/comment/list/<int:page>', methods=['GET'])
 @admin_login_req
 def comment_list(page):
     if page is None:
@@ -389,7 +413,7 @@ def comment_list(page):
     return render_template('admin/comment_list.html', page_data=page_data)
 
 
-@admin.route('/comment/del<int:id_>', methods=['GET'])
+@admin.route('/comment/del/<int:id_>', methods=['GET'])
 @admin_login_req
 def comment_del(id_):
     comment = Comment.query.get_or_404(int(id_))
@@ -399,13 +423,14 @@ def comment_del(id_):
     return redirect(url_for('admin.comment_list', page=1))
 
 
+# TODO: 完成电影收藏后端功能
 @admin.route('/moviecol/list')
 @admin_login_req
 def moviecol_list():
     return render_template('admin/moviecol_list.html')
 
 
-@admin.route('/oplog/list<int:page>', methods=['GET'])
+@admin.route('/oplog/list/<int:page>', methods=['GET'])
 @admin_login_req
 def oplog_list(page=None):
     if page is None:
@@ -420,7 +445,7 @@ def oplog_list(page=None):
     return render_template('admin/oplog_list.html', page_data=page_data)
 
 
-@admin.route('/adminloginlog/list<int:page>', methods=['GET'])
+@admin.route('/adminloginlog/list/<int:page>', methods=['GET'])
 @admin_login_req
 def adminloginlog_list(page=None):
     if page is None:
