@@ -1,11 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, FileField, TextAreaField, SelectField, SelectMultipleField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms.validators import DataRequired, ValidationError, EqualTo
 
-from app.models import Admin, Tag, Auth
+from app.models import Admin, Tag, Auth, Role
 
 tags = Tag.query.all()
 auth_list = Auth.query.all()
+role_list = Role.query.all()
 
 
 class LoginForm(FlaskForm):
@@ -316,3 +317,63 @@ class RoleForm(FlaskForm):
             'class': 'btn btn-primary'
         }
     )
+
+
+class AdminForm(FlaskForm):
+    name = StringField(
+        label='管理员名称',
+        validators=[
+            DataRequired('Please input Admin Name!')
+        ],
+        description='管理员名称',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please input Admin Name.',
+            'required': 'required'
+        }
+    )
+    pwd = PasswordField(
+        label='管理员密码',
+        validators=[
+            DataRequired('Please input Admin Password!')
+        ],
+        description='管理员密码',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please input Admin password.',
+            'required': 'required'
+        }
+    )
+    repwd = PasswordField(
+        label='重复密码',
+        validators=[
+            DataRequired('Please reinput password!'),
+            EqualTo('pwd', message='密码不一致！')
+        ],
+        description='重复密码',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please reinput password.',
+            'required': 'required'
+        }
+    )
+    role_id = SelectField(
+        label='所属角色',
+        coerce=int,
+        choices=[(v.id, v.name) for v in role_list],
+        render_kw={
+            'class': 'form-control',
+        }
+    )
+    submit = SubmitField(
+        label='确认',
+        render_kw={
+            'class': 'btn btn-primary btn-block btn-flat'
+        }
+    )
+
+    def validate_account(self, field):
+        account = field.data
+        admin = Admin.query.filter_by(name=account).count()
+        if admin == 0:
+            raise ValidationError('账号不存在! ')
