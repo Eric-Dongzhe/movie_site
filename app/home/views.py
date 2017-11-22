@@ -1,6 +1,6 @@
 # coding=utf-8
 from . import home
-from flask import render_template, redirect, url_for
+from flask import render_template, redirect, url_for, flash, session, request, abort
 
 
 @home.route('/')
@@ -59,9 +59,13 @@ def animation():
     return render_template('home/animation.html')
 
 
-@home.route('/search/')
-def search():
-    return render_template('home/search.html')
+@home.route('/search/<int:page>/')
+def search(page):
+    if page is None:
+        page = 1
+    key = request.args.get('key', '')
+    print(key)
+    return render_template('home/search.html', key=key)
 
 
 @home.route('/play/')
