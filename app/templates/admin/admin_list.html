@@ -47,8 +47,7 @@
                             {% else %}
                             <td>普通管理员</td>
                             {% endif %}
-                            <!--TODO: 修改在此处显示角色名称而不是角色Id-->
-                            <td>{{ v.role_id }}</td>
+                            <td>{{ v.role.name }}</td>
                             <td>{{ v.addtime }}</td>
                         </tr>
                         {% endfor %}
