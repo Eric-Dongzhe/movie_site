@@ -1,10 +1,26 @@
+# coding:utf-8
+
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, FileField, TextAreaField, SelectField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, FileField, TextAreaField, SelectField, SelectMultipleField
+from wtforms.validators import DataRequired, ValidationError, EqualTo
 
-from app.models import Admin, Tag
+from app.models import Admin, Tag, Auth, Role
 
-tags = Tag.query.all()
+try:
+    tags = Tag.query.all()
+except Exception as tags_e:
+    print(tags_e)
+    tags = []
+try:
+    auth_list = Auth.query.all()
+except Exception as auths_e:
+    print(auths_e)
+    auth_list = []
+try:
+    role_list = Role.query.all()
+except Exception as rolls_e:
+    print(rolls_e)
+    role_list = []
 
 
 class LoginForm(FlaskForm):
@@ -244,3 +260,134 @@ class PwdForm(FlaskForm):
         ).first()
         if not admin.check_pwd(pwd):
             raise ValidationError('old password wrong!')
+
+
+class AuthForm(FlaskForm):
+    name = StringField(
+        label='权限名称',
+        validators=[
+            DataRequired('请输入权限名称')
+        ],
+        description='权限名称',
+        render_kw={
+            "class": "form-control",
+            "id": "input_name",
+            "placeholder": "请输入权限"
+
+        }
+    )
+    url = StringField(
+        label='权限地址',
+        validators=[
+            DataRequired('请输入权限地址')
+        ],
+        description='权限地址',
+        render_kw={
+            "class": "form-control",
+            "id": "input_name",
+            "placeholder": "请输入权限地址"
+
+        }
+    )
+    submit = SubmitField(
+        label='确认',
+        render_kw={
+            'class': 'btn btn-primary'
+        }
+    )
+
+
+class RoleForm(FlaskForm):
+    name = StringField(
+        label='角色名称',
+        validators=[
+            DataRequired('请输入角色名称')
+        ],
+        description='角色名称',
+        render_kw={
+            "class": "form-control",
+            "id": "input_name",
+            "placeholder": "请输入角色名称"
+
+        }
+
+    )
+    auths = SelectMultipleField(
+        label='权限列表',
+        validators=[
+            DataRequired('请选择权限！')
+        ],
+        coerce=int,
+        choices=[(v.id, v.name) for v in auth_list],
+        description='权限列表',
+        render_kw={
+            "class": "form-control",
+            # "placeholder": "请选择权限"
+        }
+    )
+    submit = SubmitField(
+        label='确认',
+        render_kw={
+            'class': 'btn btn-primary'
+        }
+    )
+
+
+class AdminForm(FlaskForm):
+    name = StringField(
+        label='管理员名称',
+        validators=[
+            DataRequired('Please input Admin Name!')
+        ],
+        description='管理员名称',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please input Admin Name.',
+            'required': 'required'
+        }
+    )
+    pwd = PasswordField(
+        label='管理员密码',
+        validators=[
+            DataRequired('Please input Admin Password!')
+        ],
+        description='管理员密码',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please input Admin password.',
+            'required': 'required'
+        }
+    )
+    repwd = PasswordField(
+        label='重复密码',
+        validators=[
+            DataRequired('Please reinput password!'),
+            EqualTo('pwd', message='密码不一致！')
+        ],
+        description='重复密码',
+        render_kw={
+            'class': 'form-control',
+            'placeholder': 'Please reinput password.',
+            'required': 'required'
+        }
+    )
+    role_id = SelectField(
+        label='所属角色',
+        coerce=int,
+        choices=[(v.id, v.name) for v in role_list],
+        render_kw={
+            'class': 'form-control',
+        }
+    )
+    submit = SubmitField(
+        label='确认',
+        render_kw={
+            'class': 'btn btn-primary btn-block btn-flat'
+        }
+    )
+
+    def validate_account(self, field):
+        account = field.data
+        admin = Admin.query.filter_by(name=account).count()
+        if admin == 0:
+            raise ValidationError('账号不存在! ')

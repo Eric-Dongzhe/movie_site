@@ -2,8 +2,15 @@
 from datetime import datetime
 
 
-from app import db
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
+app = Flask(__name__)
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:spider04@spider04.wmcloud-dev.com/moviesite?charset=utf8'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moviesite.db'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+db = SQLAlchemy(app)
 
 # User
 class User(db.Model):
@@ -143,7 +150,6 @@ class Role(db.Model):
     name = db.Column(db.String(100), unique=True)
     auths = db.Column(db.String(600))
     addtime = db.Column(db.DateTime, index=True, default=datetime.now)
-    admins = db.relationship("Admin", backref='role')  # 外键关联一定添加这个，多个admin对于一个role
 
     def __repr__(self):
         return '<Role {}>'.format(self.name)
@@ -207,5 +213,71 @@ class Oplog(db.Model):
         return '<OpLog {}>'.format(self.name)
 
 
+# ----------------------数据库手动添加数据
+
+
+def creat_tables(db_):
+    db_.create_all()
+
+
+def insert_role(db_):
+    role = Role(
+        name='超级管理员',
+        auths='*'
+    )
+    db_.session.add(role)
+    db_.session.commit()
+
+
+def insert_admin(db_):
+    from werkzeug.security import generate_password_hash
+
+    admin = Admin(
+        name='admin',
+        pwd=generate_password_hash("654321"),
+        is_super=0,
+        role_id=1
+    )
+    db_.session.add(admin)
+    db_.session.commit()
+
+
+def insert_user(db_):
+    from werkzeug.security import generate_password_hash
+
+    for i in range(1, 20):
+        name = "user_{}".format(i)
+        pwd = "pwd_{}".format(i)
+        email = '66666{}@dell.com'.format(i)
+        phone = '66666{}'.format(i)
+        info = '大家好！我是第{}号会员'.format(i)
+
+        user = User(
+            name=name,
+            pwd=generate_password_hash(pwd),
+            email=email,
+            phone=phone,
+            info=info
+        )
+        db_.session.add(user)
+    db_.session.commit()
+
+
+def insert_coment(db_):
+    from random import choice
+    comments = ['无聊', '屌炸天', '女主好漂亮！！！有木有', '不后悔', '女主是谁', '给小萝莉打call', '楼上的，打你妹的call']
+    for i in range(3, 20):
+        comment = Comment(
+            content=choice(comments),
+            movie_id=choice([2,3]),
+            user_id=i
+        )
+        print(comment)
+        db_.session.add(comment)
+    db_.session.commit()
+
+
 if __name__ == '__main__':
-    db.create_all()
+
+    # creat_tables(db)
+    insert_admin(db)
